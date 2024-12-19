@@ -11,6 +11,9 @@ const debounce = require('lodash.debounce')
 const callbackHandler = require('./callback.cjs').callbackHandler
 const isCallbackSet = require('./callback.cjs').isCallbackSet
 
+const { createLogger, format, transports } = require('winston');
+const path = require('path');
+
 const CALLBACK_DEBOUNCE_WAIT = parseInt(process.env.CALLBACK_DEBOUNCE_WAIT || '2000')
 const CALLBACK_DEBOUNCE_MAXWAIT = parseInt(process.env.CALLBACK_DEBOUNCE_MAXWAIT || '10000')
 
@@ -22,6 +25,23 @@ const wsReadyStateClosed = 3 // eslint-disable-line
 // disable gc when using snapshots!
 const gcEnabled = process.env.GC !== 'false' && process.env.GC !== '0'
 const persistenceDir = process.env.YPERSISTENCE
+const logEnabled = process.env.LOG === 'true';
+
+// 고유한 파일 이름 생성
+const logFilePath = path.join(__dirname, 'logs', `log-${new Date().toISOString().replace(/:/g, '-')}.txt`);
+
+// 로거 생성
+const logger = createLogger({
+  level: 'info',
+  format: format.combine(
+    format.timestamp(),
+    format.printf(({ timestamp, level, message }) => `[${timestamp}] [${level.toUpperCase()}] ${message}`)
+  ),
+  transports: [
+    logEnabled === true ? new transports.File({ filename: logFilePath }) : new transports.Console(),
+  ],
+});
+
 /**
  * @type {{bindState: function(string,WSSharedDoc):void, writeState:function(string,WSSharedDoc):Promise<any>, provider: any}|null}
  */
@@ -260,7 +280,22 @@ exports.setupWSConnection = (conn, req, { docName = (req.url || '').slice(1).spl
   const doc = getYDoc(docName, gc)
   doc.conns.set(conn, new Set())
   // listen and reply to events
-  conn.on('message', /** @param {ArrayBuffer} message */ message => messageListener(conn, doc, new Uint8Array(message)))
+  conn.on('message', /** @param {ArrayBuffer} message */ message => {
+    const uint8Array = new Uint8Array(message)
+    messageListener(conn, doc, uint8Array)
+
+    if (logEnabled === true) {
+      try {
+        const decodedMessage = new TextDecoder('utf-8').decode(uint8Array);
+        if (decodedMessage.length > 100) {
+          // 연결상태 조회를 위한 메시지는 제외
+          logger.info('Decoded message: ' + decodedMessage);
+        }
+      } catch (error) {
+        logger.info('Error handling message: ' + error);
+      }
+    }
+  });
 
   // Check if connection is still alive
   let pongReceived = true
