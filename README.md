@@ -1,3 +1,16 @@
+>> 이상현 작업 내용
+
+사용적합성 관찰기록지 프론트 <-> 사용적합성 관찰기록지 공유 웹소켓 서버 작성
+
+모듈 설치 방법 : npm i
+
+로컬환경 실행 방법 : node .\bin\server.cjs HOST=localhost PORT=1234 npx y-websocket
+
+도커 파일 생성 방법 : docker build .
+
+도커 파일 실행 방법 : docker run -p 1234:1234 y-websocket:v1.0
+
+작업 내용 : 기본 HOST를 0.0.0.0으로 설정하여 외부IP에서 접근 가능하도록 변경, 도커 파일 생성 시 발생하는 오류 수정
 
 # y-websocket :tophat:
 > WebSocket Provider for Yjs
