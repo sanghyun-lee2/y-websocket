@@ -1,18 +1,22 @@
->> 이상현 작업 내용
+# [서울대학교병원] 사용적합성평가 관찰기록지 공유 웹소켓 서버
 
-사용적합성 관찰기록지 프론트 <-> 사용적합성 관찰기록지 공유 웹소켓 서버 작성
+사용적합성 관찰기록지 프론트 <-> 사용적합성 관찰기록지 공유 웹소켓 서버
 
-모듈 설치 방법 : npm i
+Node.js 버전: v18.14.1
 
-로컬환경 실행 방법 : node .\bin\server.cjs HOST=localhost PORT=1234 npx y-websocket
+모듈 설치 방법: npm install
 
-도커 파일 생성 방법 : docker build .
+로컬환경 실행 방법: node .\bin\server.cjs HOST=localhost PORT=1234 npx y-websocket  
+※ 실행 성공 시: running at '0.0.0.0' on port 1234
 
-도커 파일 실행 방법 : docker run -p 1234:1234 y-websocket:v1.0
+도커 파일 생성 방법: docker build .
 
-작업 내용 : 기본 HOST를 0.0.0.0으로 설정하여 외부IP에서 접근 가능하도록 변경, 도커 파일 생성 시 발생하는 오류 수정
+도커 파일 실행 방법: docker run -p 1234:1234 y-websocket:v1.0
+
+작업 내용: 기본 HOST를 0.0.0.0으로 설정하여 외부IP에서 접근 가능하도록 변경, 메시지 로깅 추가
 
 # y-websocket :tophat:
+
 > WebSocket Provider for Yjs
 
 The Websocket Provider implements a classical client server model. Clients
@@ -22,23 +26,21 @@ information and document updates among clients.
 This repository contains a simple in-memory backend that can persist to
 databases, but it can't be scaled easily. The
 [y-redis](https://github.com/yjs/y-redis/) repository contains an alternative
-backend that is scalable, provides auth*, and can persist to different backends.
+backend that is scalable, provides auth\*, and can persist to different backends.
 
 The Websocket Provider is a solid choice if you want a central source that
 handles authentication and authorization. Websockets also send header
 information and cookies, so you can use existing authentication mechanisms with
 this server.
 
-* Supports cross-tab communication. When you open the same document in the same
-browser, changes on the document are exchanged via cross-tab communication
-([Broadcast
-Channel](https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API)
-and
-[localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
-as fallback).
-* Supports exchange of awareness information (e.g. cursors).
-
-
+- Supports cross-tab communication. When you open the same document in the same
+  browser, changes on the document are exchanged via cross-tab communication
+  ([Broadcast
+  Channel](https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API)
+  and
+  [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
+  as fallback).
+- Supports exchange of awareness information (e.g. cursors).
 
 ## Quick Start
 
@@ -61,15 +63,19 @@ HOST=localhost PORT=1234 npx y-websocket
 ### Client Code:
 
 ```js
-import * as Y from 'yjs'
-import { WebsocketProvider } from 'y-websocket'
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
 
-const doc = new Y.Doc()
-const wsProvider = new WebsocketProvider('ws://localhost:1234', 'my-roomname', doc)
+const doc = new Y.Doc();
+const wsProvider = new WebsocketProvider(
+  "ws://localhost:1234",
+  "my-roomname",
+  doc
+);
 
-wsProvider.on('status', event => {
-  console.log(event.status) // logs "connected" or "disconnected"
-})
+wsProvider.on("status", (event) => {
+  console.log(event.status); // logs "connected" or "disconnected"
+});
 ```
 
 #### Client Code in Node.js
@@ -77,13 +83,18 @@ wsProvider.on('status', event => {
 The WebSocket provider requires a [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) object to create connection to a server. You can polyfill WebSocket support in Node.js using the [`ws` package](https://www.npmjs.com/package/ws).
 
 ```js
-const wsProvider = new WebsocketProvider('ws://localhost:1234', 'my-roomname', doc, { WebSocketPolyfill: require('ws') })
+const wsProvider = new WebsocketProvider(
+  "ws://localhost:1234",
+  "my-roomname",
+  doc,
+  { WebSocketPolyfill: require("ws") }
+);
 ```
 
 ## API
 
 ```js
-import { WebsocketProvider } from 'y-websocket'
+import { WebsocketProvider } from "y-websocket";
 ```
 
 <dl>
@@ -104,8 +115,8 @@ wsOpts = {
   // Specify an existing Awareness instance - see https://github.com/yjs/y-protocols
   awareness: new awarenessProtocol.Awareness(ydoc),
   // Specify the maximum amount to wait between reconnects (we use exponential backoff).
-  maxBackoffTime: 2500
-}
+  maxBackoffTime: 2500,
+};
 ```
 
 <dl>
@@ -165,15 +176,16 @@ Send a debounced callback to an HTTP server (`POST`) on document update. Note th
 
 Can take the following ENV variables:
 
-* `CALLBACK_URL` : Callback server URL
-* `CALLBACK_DEBOUNCE_WAIT` : Debounce time between callbacks (in ms). Defaults to 2000 ms
-* `CALLBACK_DEBOUNCE_MAXWAIT` : Maximum time to wait before callback. Defaults to 10 seconds
-* `CALLBACK_TIMEOUT` : Timeout for the HTTP call. Defaults to 5 seconds
-* `CALLBACK_OBJECTS` : JSON of shared objects to get data (`'{"SHARED_OBJECT_NAME":"SHARED_OBJECT_TYPE}'`)
+- `CALLBACK_URL` : Callback server URL
+- `CALLBACK_DEBOUNCE_WAIT` : Debounce time between callbacks (in ms). Defaults to 2000 ms
+- `CALLBACK_DEBOUNCE_MAXWAIT` : Maximum time to wait before callback. Defaults to 10 seconds
+- `CALLBACK_TIMEOUT` : Timeout for the HTTP call. Defaults to 5 seconds
+- `CALLBACK_OBJECTS` : JSON of shared objects to get data (`'{"SHARED_OBJECT_NAME":"SHARED_OBJECT_TYPE}'`)
 
 ```sh
 CALLBACK_URL=http://localhost:3000/ CALLBACK_OBJECTS='{"prosemirror":"XmlFragment"}' npm start
 ```
+
 This sends a debounced callback to `localhost:3000` 2 seconds after receiving an update (default `DEBOUNCE_WAIT`) with the data of an XmlFragment named `"prosemirror"` in the body.
 
 ## License
